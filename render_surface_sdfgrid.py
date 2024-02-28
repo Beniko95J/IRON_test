@@ -19,6 +19,7 @@ from models.renderer_ggx import GGXColocatedRenderer
 from models.image_losses import PyramidL2Loss, ssim_loss_fn
 from models.export_mesh import export_mesh
 from models.export_materials import export_materials
+from tri_interp import trilinear_interpolation_torch
 
 ###### arguments
 def config_parser():

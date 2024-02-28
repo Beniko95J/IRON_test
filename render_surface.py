@@ -280,8 +280,8 @@ if os.path.isfile(args.neus_ckpt_fpath):
     ic(f"Loading from neus checkpoint: {args.neus_ckpt_fpath}")
     ckpt = torch.load(args.neus_ckpt_fpath, map_location=torch.device("cuda"))
     try:
-        sdf_network.load_state_dict(ckpt["sdf_network_fine"])
-        color_network_dict["diffuse_albedo_network"].load_state_dict(ckpt["color_network_fine"])
+        sdf_network.load_state_dict(ckpt["sdf_network_fine"])  # FIXME: Load SDF grid instead.
+        color_network_dict["diffuse_albedo_network"].load_state_dict(ckpt["color_network_fine"])  # FIXME: Initialize instead.
     except:
         traceback.print_exc()
         # ic("Failed to initialize diffuse_albedo_network from checkpoint: ", args.neus_ckpt_fpath)
