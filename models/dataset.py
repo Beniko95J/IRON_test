@@ -34,7 +34,7 @@ def load_K_Rt_from_P(filename, P=None):
 
     return intrinsics, pose
 
-
+suffix = '.exr'
 class Dataset:
     def __init__(self, conf):
         super(Dataset, self).__init__()
@@ -53,7 +53,7 @@ class Dataset:
 
         camera_dict = json.load(open(os.path.join(self.data_dir, "cam_dict_norm.json")))
         for x in list(camera_dict.keys()):
-            x = x[:-4] + ".png"
+            x = x[:-4] + suffix
             camera_dict[x]["K"] = np.array(camera_dict[x]["K"]).reshape((4, 4))
             camera_dict[x]["W2C"] = np.array(camera_dict[x]["W2C"]).reshape((4, 4))
 
@@ -103,7 +103,7 @@ class Dataset:
         self.pose_all = []
         self.world_mats_np = []
         for x in self.images_lis:
-            x = os.path.basename(x)[:-4] + ".png"
+            x = os.path.basename(x)[:-4] + suffix
             K = self.camera_dict[x]["K"].astype(np.float32)
             W2C = self.camera_dict[x]["W2C"].astype(np.float32)
             C2W = np.linalg.inv(self.camera_dict[x]["W2C"]).astype(np.float32)

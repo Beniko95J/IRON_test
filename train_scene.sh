@@ -1,4 +1,4 @@
-SCENE=$1
+SCENE=Luan_etal_2021/buddha
 
 python render_volume.py --mode train --conf ./confs/womask_iron.conf --case ${SCENE}
 
