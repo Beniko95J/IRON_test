@@ -77,7 +77,7 @@ class Dataset:
                 1.0,
             )
 
-        no_mask = True
+        no_mask = False
         if no_mask:
             print("Not using masks")
             self.masks_lis = None
