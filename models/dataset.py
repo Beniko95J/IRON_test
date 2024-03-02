@@ -72,10 +72,11 @@ class Dataset:
             self.images_lis = sorted(glob(os.path.join(self.data_dir, "image/*.exr")))
             self.n_images = len(self.images_lis)
             self.images_np = np.clip(
-                np.power(np.stack([pyexr.open(im_name).get()[:, :, ::-1] for im_name in self.images_lis]), 1.0 / 2.2),
+                np.power(np.stack([pyexr.open(im_name).get()[:, :, :-1][:, :, ::-1] for im_name in self.images_lis]), 1.0 / 2.2),
                 0.0,
                 1.0,
             )
+            # import pdb; pdb.set_trace()
 
         no_mask = False
         if no_mask:
@@ -133,6 +134,7 @@ class Dataset:
         self.object_bbox_max = object_bbox_max[:3, 0]
 
         print("Load data: End")
+        # import pdb; pdb.set_trace()
 
     def gen_rays_at(self, img_idx, resolution_level=1):
         """
@@ -149,12 +151,18 @@ class Dataset:
         rays_o = self.pose_all[img_idx, None, None, :3, 3].expand(rays_v.shape)  # W, H, 3
         return rays_o.transpose(0, 1), rays_v.transpose(0, 1)
 
-    def gen_random_rays_at(self, img_idx, batch_size):
+    def gen_random_rays_at(self, img_idx, batch_size, precrop_ratio=0.2):
         """
         Generate random rays at world space from one camera.
         """
-        pixels_x = torch.randint(low=0, high=self.W, size=[batch_size])
-        pixels_y = torch.randint(low=0, high=self.H, size=[batch_size])
+
+        if precrop_ratio > 0:
+            start_x, end_x = int(precrop_ratio * self.W), int((1- precrop_ratio) * self.W)
+            pixels_x = torch.randint(low=start_x, high=end_x, size=[batch_size])
+            pixels_y = torch.randint(low=0, high=self.H, size=[batch_size])
+        else:
+            pixels_x = torch.randint(low=0, high=self.W, size=[batch_size])
+            pixels_y = torch.randint(low=0, high=self.H, size=[batch_size])
         color = self.images[img_idx][(pixels_y, pixels_x)]  # batch_size, 3
         mask = self.masks[img_idx][(pixels_y, pixels_x)]  # batch_size, 3
         p = torch.stack([pixels_x, pixels_y, torch.ones_like(pixels_y)], dim=-1).float()  # batch_size, 3
@@ -209,7 +217,7 @@ class Dataset:
         if self.images_lis[idx].endswith(".exr"):
             import pyexr
 
-            img = np.power(pyexr.open(self.images_lis[idx]).get()[:, :, ::-1], 1.0 / 2.2) * 255.0
+            img = np.power(pyexr.open(self.images_lis[idx]).get()[:, :, :-1][:, :, ::-1], 1.0 / 2.2) * 255.0
         else:
             img = cv.imread(self.images_lis[idx])
         return (cv.resize(img, (self.W // resolution_level, self.H // resolution_level))).clip(0, 255).astype(np.uint8)

@@ -1,0 +1,1 @@
+cv.imwrite('test.png', (self.images_np[0][:, 216:864, :]*255).astype(np.uint8))

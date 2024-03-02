@@ -327,7 +327,7 @@ class Runner:
                     np.concatenate(
                         [
                             img_fine[..., i],
-                            self.dataset.image_at(idx, resolution_level=resolution_level),
+                            self.dataset.image_at(idx, resolution_level=resolution_level)[..., :3],
                         ]
                     ),
                 )
