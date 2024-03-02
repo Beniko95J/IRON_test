@@ -14,6 +14,7 @@ import shutil
 import traceback
 import trimesh
 from copy import deepcopy
+import cv2 as cv
 
 from models.fields import SDFNetwork, RenderingNetwork
 from models.raytracer import RayTracer, Camera, render_camera
@@ -277,7 +278,9 @@ def load_datadir(datadir):
         elif fpath[-4:] in ['.exr']:
             import pyexr
 
-            im = np.power(pyexr.open(fpath).get()[:, :, :-1][:, :, ::-1], 1.0 / 2.2) * 255.0
+            im = np.power(pyexr.open(fpath).get()[:, :, :-1], 1.0 / 2.2)
+            im = np.clip(im, 0.0, 1.0)
+            # import pdb; pdb.set_trace()
         else:
             raise NotImplementedError
 
@@ -416,6 +419,7 @@ if args.render_all:
 fill_holes = False
 handle_edges = not args.no_edgesample
 is_training = True
+# import pdb; pdb.set_trace()
 if args.inv_gamma_gt:
     ic("linearizing ground-truth images using inverse gamma correction")
     gt_images = torch.pow(gt_images, 2.2)
@@ -508,6 +512,7 @@ for global_step in tqdm.tqdm(range(start_step + 1, args.num_iters)):
             os.path.join(args.out_dir, f"ckpt_{global_step}.pth"),
         )
 
+    # import pdb; pdb.set_trace()
     if global_step % 500 == 0:
         ic(
             args.out_dir,

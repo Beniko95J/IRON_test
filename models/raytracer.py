@@ -324,7 +324,7 @@ class Camera(object):
         )
         return uv
 
-    def crop_region(self, trgt_W, trgt_H, center_crop=False, ul_corner=None, image=None):
+    def crop_region(self, trgt_W, trgt_H, center_crop=False, ul_corner=None, image=None, precrop_ratio=0.2):
         K = self.K.clone()
         if ul_corner is not None:
             ul_col, ul_row = ul_corner
@@ -332,7 +332,8 @@ class Camera(object):
             ul_col = self.W // 2 - trgt_W // 2
             ul_row = self.H // 2 - trgt_H // 2
         else:
-            ul_col = np.random.randint(0, self.W - trgt_W)
+            start_x, end_x = int(precrop_ratio * self.W), int((1- precrop_ratio) * self.W)
+            ul_col = np.random.randint(start_x, end_x - trgt_W)
             ul_row = np.random.randint(0, self.H - trgt_H)
         # modify K
         K[0, 2] -= ul_col
