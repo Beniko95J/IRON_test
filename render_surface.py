@@ -252,8 +252,16 @@ def load_datadir(datadir):
     W2Cs = []
     for x in imgnames:
         fpath = os.path.join(datadir, "image", x)
-        assert fpath[-4:] in [".jpg", ".png"], "must use ldr images as inputs"
-        im = imageio.imread(fpath).astype(np.float32) / 255.0
+        if fpath[-4:] in [".jpg", ".png"]:
+        # assert fpath[-4:] in [".jpg", ".png"], "must use ldr images as inputs"
+            im = imageio.imread(fpath).astype(np.float32) / 255.0
+        elif fpath[-4:] in ['.exr']:
+            import pyexr
+
+            im = np.power(pyexr.open(fpath).get()[:, :, :-1][:, :, ::-1], 1.0 / 2.2) * 255.0
+        else:
+            raise NotImplementedError
+
         K = np.array(cam_dict[x]["K"]).reshape((4, 4)).astype(np.float32)
         W2C = np.array(cam_dict[x]["W2C"]).reshape((4, 4)).astype(np.float32)
 
