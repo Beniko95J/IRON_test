@@ -12,6 +12,8 @@ from icecream import ic
 import glob
 import shutil
 import traceback
+import trimesh
+from copy import deepcopy
 
 from models.fields import SDFNetwork, RenderingNetwork
 from models.raytracer import RayTracer, Camera, render_camera
@@ -239,6 +241,23 @@ def to8b(x):
 
 
 def load_datadir(datadir):
+    # Scale_mat: transform the object to unit sphere for training
+    pcd = trimesh.load('datasets/000.obj')
+    vertices = pcd.vertices
+    bbox_max = np.max(vertices, axis=0) 
+    bbox_min = np.min(vertices, axis=0) 
+    center = (bbox_max + bbox_min) * 0.5
+    radius = np.linalg.norm(vertices - center, ord=2, axis=-1).max() 
+    scale_mat = np.diag([radius, radius, radius, 1.0]).astype(np.float32)
+    scale_mat[:3, 3] = center
+
+    # Scale_mat: transform the reconstructed mesh in unit sphere to original space with scale 150 for evaluation
+    # scale_mat = deepcopy(scale_mat)
+    # scale_mat[0, 0] *= 150
+    # scale_mat[1, 1] *= 150
+    # scale_mat[2, 2] *= 150
+    # scale_mat[:3, 3] *= 150
+
     cam_dict = json.load(open(os.path.join(datadir, "cam_dict_norm.json")))
     imgnames = list(cam_dict.keys())
     try:
@@ -264,11 +283,14 @@ def load_datadir(datadir):
 
         K = np.array(cam_dict[x]["K"]).reshape((4, 4)).astype(np.float32)
         W2C = np.array(cam_dict[x]["W2C"]).reshape((4, 4)).astype(np.float32)
+        C2W = np.linalg.inv(W2C)
+        C2W_transformed = np.linalg.inv(scale_mat) @ C2W
+        W2C_transformed = np.linalg.inv(C2W_transformed)
 
         image_fpaths.append(fpath)
         gt_images.append(torch.from_numpy(im))
         Ks.append(torch.from_numpy(K))
-        W2Cs.append(torch.from_numpy(W2C))
+        W2Cs.append(torch.from_numpy(W2C_transformed))
     gt_images = torch.stack(gt_images, dim=0)
     Ks = torch.stack(Ks, dim=0)
     W2Cs = torch.stack(W2Cs, dim=0)
