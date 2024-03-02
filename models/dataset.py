@@ -8,6 +8,8 @@ from icecream import ic
 from scipy.spatial.transform import Rotation as Rot
 from scipy.spatial.transform import Slerp
 import traceback
+import trimesh
+from copy import deepcopy
 
 
 # This function is borrowed from IDR: https://github.com/lioryariv/idr
@@ -48,6 +50,24 @@ class Dataset:
 
         self.camera_outside_sphere = conf.get_bool("camera_outside_sphere", default=True)
         # self.scale_mat_scale = conf.get_float('scale_mat_scale', default=1.1)  # not used
+
+        # Scale_mat: transform the object to unit sphere for training
+        pcd = trimesh.load('datasets/000.obj')
+        vertices = pcd.vertices
+        bbox_max = np.max(vertices, axis=0) 
+        bbox_min = np.min(vertices, axis=0) 
+        center = (bbox_max + bbox_min) * 0.5
+        radius = np.linalg.norm(vertices - center, ord=2, axis=-1).max() 
+        scale_mat = np.diag([radius, radius, radius, 1.0]).astype(np.float32)
+        scale_mat[:3, 3] = center
+
+        # Scale_mat: transform the reconstructed mesh in unit sphere to original space with scale 150 for evaluation
+        self.scale_mat = deepcopy(scale_mat)
+        self.scale_mat[0, 0] *= 150
+        self.scale_mat[1, 1] *= 150
+        self.scale_mat[2, 2] *= 150
+        self.scale_mat[:3, 3] *= 150
+        import pdb; pdb.set_trace()
 
         import json
 
@@ -121,6 +141,8 @@ class Dataset:
         self.intrinsics_all_inv = torch.inverse(self.intrinsics_all)  # [n_images, 4, 4]
         self.focal = self.intrinsics_all[0][0, 0]
         self.pose_all = torch.stack(self.pose_all).to(self.device)  # [n_images, 4, 4]
+        for i in range(self.pose_all.shape[0]):
+            self.pose_all[i, :, 3:] = torch.from_numpy(np.linalg.inv(scale_mat)).cuda() @ self.pose_all[i, :, 3:]
         self.H, self.W = self.images.shape[1], self.images.shape[2]
         self.image_pixels = self.H * self.W
 
