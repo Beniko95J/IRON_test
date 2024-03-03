@@ -70,7 +70,7 @@ def export_mesh(sdf, mesh_fpath, resolution=512, max_n_pts=100000):
     verts = verts + np.array([grid["xyz"][0][0], grid["xyz"][1][0], grid["xyz"][2][0]])
     mesh_low_res = trimesh.Trimesh(verts, faces, normals)
     components = mesh_low_res.split(only_watertight=False)
-    areas = np.array([c.area for c in components], dtype=np.float)
+    areas = np.array([c.area for c in components], dtype=float)
     mesh_low_res = components[areas.argmax()]
     recon_pc = trimesh.sample.sample_surface(mesh_low_res, 10000)[0]
     recon_pc = torch.from_numpy(recon_pc).float().cuda()

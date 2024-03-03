@@ -67,7 +67,7 @@ class Dataset:
         self.scale_mat[1, 1] *= 150
         self.scale_mat[2, 2] *= 150
         self.scale_mat[:3, 3] *= 150
-        import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
 
         import json
 
