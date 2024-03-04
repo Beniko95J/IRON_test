@@ -54,7 +54,7 @@ class Dataset:
         # Scale_mat: transform the object to unit sphere for training
         self.load_sdf_grid = True
         if self.load_sdf_grid:
-            sdf_grid_dict = np.load('datasets/sdf_grid.npy')
+            sdf_grid_dict = np.load('datasets/sdf_grid.npy', allow_pickle=True).item()
             self.sdf_grid = sdf_grid_dict['grid']
             self.sdf_grid = torch.from_numpy(self.sdf_grid).to(self.device)
             center = sdf_grid_dict['center']
@@ -69,13 +69,14 @@ class Dataset:
             scale_mat = np.diag([radius, radius, radius, 1.0]).astype(np.float32)
             scale_mat[:3, 3] = center
 
-        # Scale_mat: transform the reconstructed mesh in unit sphere to original space with scale 150 for evaluation
-        self.scale_mat = deepcopy(scale_mat)
-        self.scale_mat[0, 0] *= 150
-        self.scale_mat[1, 1] *= 150
-        self.scale_mat[2, 2] *= 150
-        self.scale_mat[:3, 3] *= 150
-        # import pdb; pdb.set_trace()
+            # Scale_mat: transform the reconstructed mesh in unit sphere to original space with scale 150 for evaluation
+            self.scale_mat = deepcopy(scale_mat)
+            self.scale_mat[0, 0] *= 150
+            self.scale_mat[1, 1] *= 150
+            self.scale_mat[2, 2] *= 150
+            self.scale_mat[:3, 3] *= 150
+            # import pdb; pdb.set_trace()
+            self.sdf_grid = None
 
         import json
 
@@ -151,9 +152,13 @@ class Dataset:
         self.pose_all = torch.stack(self.pose_all).to(self.device)  # [n_images, 4, 4]
         for i in range(self.pose_all.shape[0]):
             if self.load_sdf_grid:
-                self.pose_all[i, :, 3:] = scale * (self.pose_all[i, :, 3:] - torch.from_numpy(center).cuda())
+                scale_mat = np.diag([scale, scale, scale, 1.0]).astype(np.float32)
+                scale_mat = torch.from_numpy(scale_mat).cuda()
+                self.pose_all[i, :3, 3:] = self.pose_all[i, :3, 3:] - torch.from_numpy(center).cuda()[..., None]
+                self.pose_all[i, :, 3:] = scale_mat @ (self.pose_all[i, :, 3:])
             else:
                 self.pose_all[i, :, 3:] = torch.from_numpy(np.linalg.inv(scale_mat)).cuda() @ self.pose_all[i, :, 3:]
+
         self.H, self.W = self.images.shape[1], self.images.shape[2]
         self.image_pixels = self.H * self.W
 

@@ -6,6 +6,8 @@ import logging
 import mcubes
 from icecream import ic
 
+from tri_interp import trilinear_interpolation_torch
+
 
 def extract_fields(bound_min, bound_max, resolution, query_func):
     N = 64
@@ -211,6 +213,7 @@ class NeuSRenderer:
         background_sampled_color=None,
         background_rgb=None,
         cos_anneal_ratio=0.0,
+        sdf_grid=None,
     ):
         batch_size, n_samples = z_vals.shape
 
@@ -226,9 +229,27 @@ class NeuSRenderer:
         pts = pts.reshape(-1, 3)
         dirs = dirs.reshape(-1, 3)
 
+        sdf_grid_output = None
+        if sdf_grid is not None:
+            sdf_grid_output = trilinear_interpolation_torch(sdf_grid, pts)
+
         sdf_nn_output = sdf_network(pts)
         sdf = sdf_nn_output[:, :1]
         feature_vector = sdf_nn_output[:, 1:]
+
+        sdf_grid_loss = None
+        if sdf_grid_output is not None:
+            # import pdb; pdb.set_trace()
+            sdf_grid_output = sdf_grid_output[..., None] # (65536,) -> (65536, 1)
+            sdf_grid_error = []
+            chunk_size = 1024 * 16
+            for i in range(0, batch_size * n_samples, chunk_size):
+                sdf_grid_error.append(torch.abs(sdf[i:i+chunk_size] - sdf_grid_output[i:i+chunk_size]))
+            
+            sdf_grid_error = torch.cat(sdf_grid_error)
+            sdf_grid_loss = torch.mean(sdf_grid_error)
+
+            # import pdb; pdb.set_trace()
 
         gradients = sdf_network.gradient(pts)
         sampled_color = color_network(pts, gradients, dirs, feature_vector).reshape(batch_size, n_samples, 3)
@@ -291,6 +312,7 @@ class NeuSRenderer:
             "weights": weights,
             "cdf": c.reshape(batch_size, n_samples),
             "gradient_error": gradient_error,
+            "sdf_grid_loss": sdf_grid_loss,
             "inside_sphere": inside_sphere,
         }
 
@@ -303,6 +325,7 @@ class NeuSRenderer:
         perturb_overwrite=-1,
         background_rgb=None,
         cos_anneal_ratio=0.0,
+        sdf_grid=None,
     ):
         batch_size = len(rays_o)
         sample_dist = 2.0 / self.n_samples  # Assuming the region of interest is a unit sphere
@@ -383,6 +406,7 @@ class NeuSRenderer:
             background_alpha=background_alpha,
             background_sampled_color=background_sampled_color,
             cos_anneal_ratio=cos_anneal_ratio,
+            sdf_grid=sdf_grid,
         )
 
         color_fine = ret_fine["color"]
@@ -400,6 +424,7 @@ class NeuSRenderer:
             "gradients": gradients,
             "weights": weights,
             "gradient_error": ret_fine["gradient_error"],
+            "sdf_grid_loss": ret_fine["sdf_grid_loss"],
             "inside_sphere": ret_fine["inside_sphere"],
         }
 

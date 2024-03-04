@@ -18,7 +18,7 @@ from models.renderer import NeuSRenderer
 
 
 class Runner:
-    def __init__(self, conf_path, mode="train", case="CASE_NAME", is_continue=False):
+    def __init__(self, conf_path, mode="train", case="CASE_NAME", is_continue=False, appendix="APPENDIX"):
         self.device = torch.device("cuda")
 
         # Configuration
@@ -26,6 +26,7 @@ class Runner:
         f = open(self.conf_path)
         conf_text = f.read()
         conf_text = conf_text.replace("CASE_NAME", case)
+        conf_text = conf_text.replace("APPENDIX", appendix)
         f.close()
 
         self.conf = ConfigFactory.parse_string(conf_text)
@@ -131,12 +132,14 @@ class Runner:
                 far,
                 background_rgb=background_rgb,
                 cos_anneal_ratio=self.get_cos_anneal_ratio(),
+                sdf_grid=self.dataset.sdf_grid
             )
 
             color_fine = render_out["color_fine"]
             s_val = render_out["s_val"]
             cdf_fine = render_out["cdf_fine"]
             gradient_error = render_out["gradient_error"]
+            sdf_grid_loss = render_out["sdf_grid_loss"]
             weight_max = render_out["weight_max"]
             weight_sum = render_out["weight_sum"]
 
@@ -149,7 +152,10 @@ class Runner:
 
             mask_loss = F.binary_cross_entropy(weight_sum.clip(1e-3, 1.0 - 1e-3), mask)
 
-            loss = color_fine_loss + eikonal_loss * self.igr_weight + mask_loss * self.mask_weight
+            if sdf_grid_loss is not None:
+                loss = color_fine_loss + eikonal_loss * self.igr_weight + mask_loss * self.mask_weight + sdf_grid_loss
+            else:
+                loss = color_fine_loss + eikonal_loss * self.igr_weight + mask_loss * self.mask_weight
 
             self.optimizer.zero_grad()
             loss.backward()
@@ -175,7 +181,7 @@ class Runner:
 
             if self.iter_step % self.report_freq == 0:
                 print(self.base_exp_dir)
-                print("iter:{:8>d} loss = {} lr={}".format(self.iter_step, loss, self.optimizer.param_groups[0]["lr"]))
+                print("iter:{:8>d} loss = {} sdf loss = {} lr={}".format(self.iter_step, loss, sdf_grid_loss, self.optimizer.param_groups[0]["lr"]))
 
             if self.iter_step % self.save_freq == 0:
                 self.save_checkpoint()
@@ -439,11 +445,12 @@ if __name__ == "__main__":
     parser.add_argument("--is_continue", default=False, action="store_true")
     parser.add_argument("--gpu", type=int, default=0)
     parser.add_argument("--case", type=str, default="")
+    parser.add_argument("--appendix", type=str, default="")
 
     args = parser.parse_args()
 
     torch.cuda.set_device(args.gpu)
-    runner = Runner(args.conf, args.mode, args.case, args.is_continue)
+    runner = Runner(args.conf, args.mode, args.case, args.is_continue, args.appendix)
 
     if args.mode == "train":
         runner.train()
