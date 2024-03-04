@@ -6,7 +6,7 @@ import numpy as np
 import time
 import mcubes
 
-filename = 'datasets/datasets_single/000.obj'
+filename = 'datasets/000.obj'
 
 mesh_scale = 0.9
 size = 256
@@ -19,8 +19,8 @@ vertices = mesh.vertices
 bbmin = vertices.min(0)
 bbmax = vertices.max(0)
 center = (bbmin + bbmax) * 0.5
-scale = 2.0 * mesh_scale / (bbmax - bbmin).max() # -0.8 ~ 0.8
-vertices = (vertices - center) * scale
+scale = 2.0 * mesh_scale / (bbmax - bbmin).max() # -0.9 ~ 0.9
+vertices = (vertices - center) * scale # 0.290, [0.3034, -0.546903, -0.127989]
 # import pdb; pdb.set_trace()
 
 # fix mesh
@@ -35,7 +35,7 @@ sdf_grid = {
     'scale': scale,
 }
 
-np.save('datasets/datasets_single/sdf_grid.npy', sdf_grid)
+np.save('datasets/sdf_grid.npy', sdf_grid)
 
 # output
 # mesh.vertices = mesh.vertices / scale + center
