@@ -165,8 +165,8 @@ class Dataset:
         self.H, self.W = self.images.shape[1], self.images.shape[2]
         self.image_pixels = self.H * self.W
 
-        object_bbox_min = np.array([-1.01, -1.01, -1.01, 1.0])
-        object_bbox_max = np.array([1.01, 1.01, 1.01, 1.0])
+        object_bbox_min = np.array([-1.00, -1.00, -1.00, 1.0])
+        object_bbox_max = np.array([1.00, 1.00, 1.00, 1.0])
         # Object scale mat: region of interest to **extract mesh**
         object_scale_mat = np.eye(4).astype(np.float32)
         object_bbox_min = np.linalg.inv(self.scale_mats_np[0]) @ object_scale_mat @ object_bbox_min[:, None]
