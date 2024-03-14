@@ -26,6 +26,7 @@ def extract_fields(bound_min, bound_max, resolution, query_func):
                         dim=-1,
                     )
                     val = query_func(pts).reshape(len(xs), len(ys), len(zs)).detach().cpu().numpy()
+                    # import pdb; pdb.set_trace()
                     u[
                         xi * N : xi * N + len(xs),
                         yi * N : yi * N + len(ys),
@@ -428,11 +429,20 @@ class NeuSRenderer:
             "inside_sphere": ret_fine["inside_sphere"],
         }
 
-    def extract_geometry(self, bound_min, bound_max, resolution, threshold=0.0):
-        return extract_geometry(
-            bound_min,
-            bound_max,
-            resolution=resolution,
-            threshold=threshold,
-            query_func=lambda pts: -self.sdf_network.sdf(pts),
-        )
+    def extract_geometry(self, bound_min, bound_max, resolution, threshold=0.0, sdf_grid=None):
+        if sdf_grid is not None:
+            return extract_geometry(
+                bound_min,
+                bound_max,
+                resolution=resolution,
+                threshold=threshold,
+                query_func=lambda pts: -trilinear_interpolation_torch(sdf_grid, pts),
+            )
+        else:
+            return extract_geometry(
+                bound_min,
+                bound_max,
+                resolution=resolution,
+                threshold=threshold,
+                query_func=lambda pts: -self.sdf_network.sdf(pts),
+            )

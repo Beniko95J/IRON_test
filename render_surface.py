@@ -412,7 +412,7 @@ if args.render_all:
         for x in list(results.keys()):
             results[x] = results[x].detach().cpu().numpy()
         color_im = results["color"]
-        imageio.imwrite(os.path.join(render_out_dir, os.path.basename(impath)), to8b(color_im))
+        imageio.imwrite(os.path.join(render_out_dir, os.path.basename(impath)[:-4] + '.png'), to8b(color_im))
     exit(0)
 
 ###### training

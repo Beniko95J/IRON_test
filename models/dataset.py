@@ -54,9 +54,11 @@ class Dataset:
         # Scale_mat: transform the object to unit sphere for training
         self.load_sdf_grid = True
         if self.load_sdf_grid:
-            sdf_grid_dict = np.load('datasets/sdf_grid.npy', allow_pickle=True).item()
+            sdf_grid_dict = np.load('datasets/sdf_grid_filled.npy', allow_pickle=True).item()
             self.sdf_grid = sdf_grid_dict['grid']
             self.sdf_grid = torch.from_numpy(self.sdf_grid).to(self.device)
+            self.sdf_grid = self.sdf_grid.permute(0, 2, 1)
+            self.sdf_grid = torch.flip(self.sdf_grid, dims=[1])
             center = sdf_grid_dict['center']
             scale = sdf_grid_dict['scale']
         else:
@@ -156,6 +158,7 @@ class Dataset:
                 scale_mat = torch.from_numpy(scale_mat).cuda()
                 self.pose_all[i, :3, 3:] = self.pose_all[i, :3, 3:] - torch.from_numpy(center).cuda()[..., None]
                 self.pose_all[i, :, 3:] = scale_mat @ (self.pose_all[i, :, 3:])
+                # import pdb; pdb.set_trace()
             else:
                 self.pose_all[i, :, 3:] = torch.from_numpy(np.linalg.inv(scale_mat)).cuda() @ self.pose_all[i, :, 3:]
 

@@ -157,6 +157,8 @@ class Runner:
             else:
                 loss = color_fine_loss + eikonal_loss * self.igr_weight + mask_loss * self.mask_weight
 
+            # loss = sdf_grid_loss + eikonal_loss * self.igr_weight # overwirte loss as sdfloss
+
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
@@ -381,8 +383,9 @@ class Runner:
         bound_min = torch.tensor(self.dataset.object_bbox_min, dtype=torch.float32)
         bound_max = torch.tensor(self.dataset.object_bbox_max, dtype=torch.float32)
 
+        # import pdb; pdb.set_trace()
         vertices, triangles = self.renderer.extract_geometry(
-            bound_min, bound_max, resolution=resolution, threshold=threshold
+            bound_min, bound_max, resolution=resolution, threshold=threshold, sdf_grid=None
         )
         os.makedirs(os.path.join(self.base_exp_dir, "meshes"), exist_ok=True)
 
