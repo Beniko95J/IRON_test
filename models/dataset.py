@@ -55,7 +55,8 @@ class Dataset:
         self.load_sdf_grid = True
         if self.load_sdf_grid:
             sdf_grid_dict = np.load('datasets/sdf_grid_filled.npy', allow_pickle=True).item()
-            self.sdf_grid = sdf_grid_dict['grid']
+            sdf_grid_dict_corrected = np.load('datasets/sdf_grid_filled_corrected.npy', allow_pickle=True).item()
+            self.sdf_grid = sdf_grid_dict_corrected['grid']
             self.sdf_grid = torch.from_numpy(self.sdf_grid).to(self.device)
             # self.sdf_grid = self.sdf_grid.permute(0, 2, 1)
             # self.sdf_grid = torch.flip(self.sdf_grid, dims=[1])
@@ -88,7 +89,7 @@ class Dataset:
             camera_dict[x]["K"] = np.array(camera_dict[x]["K"]).reshape((4, 4))
             w2c = np.array(camera_dict[x]["W2C"]).reshape((4, 4))
             # OpenGL -> OpenCV
-            w2c = w2c @ np.diag([1., -1., -1., 1.])
+            # w2c = w2c @ np.diag([1., -1., -1., 1.])
             camera_dict[x]["W2C"] = w2c
 
         self.camera_dict = camera_dict
