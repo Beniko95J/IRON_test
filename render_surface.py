@@ -242,15 +242,24 @@ def to8b(x):
 
 
 def load_datadir(datadir):
-    # Scale_mat: transform the object to unit sphere for training
-    pcd = trimesh.load('datasets/000.obj')
-    vertices = pcd.vertices
-    bbox_max = np.max(vertices, axis=0) 
-    bbox_min = np.min(vertices, axis=0) 
-    center = (bbox_max + bbox_min) * 0.5
-    radius = np.linalg.norm(vertices - center, ord=2, axis=-1).max() 
-    scale_mat = np.diag([radius, radius, radius, 1.0]).astype(np.float32)
-    scale_mat[:3, 3] = center
+    load_sdf_grid = True
+    if load_sdf_grid:
+        sdf_grid_dict = np.load('datasets/sdf_grid_filled.npy', allow_pickle=True).item()
+        sdf_grid_dict_corrected = np.load('datasets/sdf_grid_filled_corrected.npy', allow_pickle=True).item()
+        # self.sdf_grid = self.sdf_grid.permute(0, 2, 1)
+        # self.sdf_grid = torch.flip(self.sdf_grid, dims=[1])
+        center = sdf_grid_dict['center']
+        scale = sdf_grid_dict['scale']
+    else:
+        # Scale_mat: transform the object to unit sphere for training
+        pcd = trimesh.load('datasets/000.obj')
+        vertices = pcd.vertices
+        bbox_max = np.max(vertices, axis=0) 
+        bbox_min = np.min(vertices, axis=0) 
+        center = (bbox_max + bbox_min) * 0.5
+        radius = np.linalg.norm(vertices - center, ord=2, axis=-1).max() 
+        scale_mat = np.diag([radius, radius, radius, 1.0]).astype(np.float32)
+        scale_mat[:3, 3] = center
 
     # Scale_mat: transform the reconstructed mesh in unit sphere to original space with scale 150 for evaluation
     # scale_mat = deepcopy(scale_mat)
@@ -287,8 +296,14 @@ def load_datadir(datadir):
         K = np.array(cam_dict[x]["K"]).reshape((4, 4)).astype(np.float32)
         W2C = np.array(cam_dict[x]["W2C"]).reshape((4, 4)).astype(np.float32)
         C2W = np.linalg.inv(W2C)
-        C2W_transformed = np.linalg.inv(scale_mat) @ C2W
-        W2C_transformed = np.linalg.inv(C2W_transformed)
+        if load_sdf_grid:
+            scale_mat = np.diag([scale, scale, scale, 1.0]).astype(np.float32)
+            C2W[:3, 3:] = C2W[:3, 3:] - center[..., None]
+            C2W[:, 3:] = scale_mat @ (C2W[:, 3:])
+            # import pdb; pdb.set_trace()
+        else:
+            C2W[:, 3:] = np.linalg.inv(scale_mat) @ C2W[:, 3:]
+        W2C_transformed = np.linalg.inv(C2W)
 
         image_fpaths.append(fpath)
         gt_images.append(torch.from_numpy(im))
